@@ -1,0 +1,25 @@
+/* Calculator pages: loaded after each page's own styles. Recolors them to the site's flat green look. */
+:root,html[data-theme]{--bg:#F4F6F8;--surface:#fff;--border:#0B1221;--text:#0B1221;--muted:#64748B;--accent:#059669;--accent-dim:#E3F4EC;--nav-bg:#F4F6F8;--error:#E11D48;--success:#059669}
+body{font-family:Inter,sans-serif}
+.site-head{max-width:1400px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-end;padding:1.25rem 1.25rem 1rem;border-bottom:2px solid #0B1221}
+.site-head .brand{font:800 1.25rem Manrope,sans-serif;letter-spacing:-.02em;text-transform:uppercase;color:#0B1221;text-decoration:none}
+.site-head .mono{color:#059669;text-decoration:none}
+.theme-btn{display:none!important}
+.page{max-width:1000px}
+.page-title{font:800 clamp(2.2rem,8vw,4rem)/1 Manrope,sans-serif!important;text-transform:uppercase;letter-spacing:-.04em!important}
+.breadcrumb,.breadcrumb a{font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+.page *,.page *::before{border-radius:0!important}
+.inputs,.result-card,.chart-box,.info-box,.insights-box,.insight-box,.stat-card,.split-box,.cmp-card,.compare-box,.slab-box,.deductions{border-width:2px!important;border-color:#0B1221!important}
+.num-input,.preset-btn,.pill,.toggle-btn{border-width:2px!important;border-color:#0B1221!important}
+.num-input:focus,.preset-btn:hover{border-color:#059669!important}
+.preset-btn,.pill,.toggle-btn{background:#fff!important;color:#0B1221!important;font-weight:600}
+.preset-btn:hover,.pill.active,.toggle-btn.active,.preset-btn.active{background:#059669!important;color:#fff!important}
+.result-card.highlight{background:#059669!important;border-color:#0B1221!important}
+.result-card.highlight *{color:#fff!important}
+.result-value{font-weight:800!important}
+input[type=range]{height:3px!important;background:#0B1221!important}
+input[type=range]::-webkit-slider-thumb{width:18px!important;height:18px!important;background:#059669!important;border:2px solid #0B1221}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;background:#059669;border:2px solid #0B1221}
+.insights-title,.info-title,.insight-title{color:#059669!important}
+footer{border-top:2px solid #0B1221!important;color:#64748B}
+.back-top{background:#0B1221!important}
