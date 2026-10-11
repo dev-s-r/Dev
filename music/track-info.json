@@ -3,5 +3,10 @@
     "title": "My Song Name",
     "artist": "Artist Name",
     "cover": "example-cover.jpg"
+  },
+  "I Wonder.mp3": {
+    "title": "I Wonder",
+    "artist": "Dev Singh Rathore",
+    "cover": ""
   }
 }
