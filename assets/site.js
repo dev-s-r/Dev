@@ -58,17 +58,16 @@ function cover(color,r){
   c.style.cssText='background:'+color+';left:'+r.left+'px;top:'+r.top+'px;width:'+r.width+'px;height:'+r.height+'px';
   document.body.appendChild(c);return c;
 }
-document.querySelectorAll('a.cell').forEach(function(a){
-  a.addEventListener('click',function(e){
-    var h=a.getAttribute('href');
-    if(e.metaKey||e.ctrlKey||e.shiftKey||e.button!==0||a.target==='_blank'||!h||h==='#')return;
-    e.preventDefault();
-    if(a.dataset.id)sessionStorage.setItem('openedTile',a.dataset.id);
-    if(REDUCE)return location.href=a.href;
-    var c=cover(getComputedStyle(a).backgroundColor,a.getBoundingClientRect());
-    requestAnimationFrame(function(){requestAnimationFrame(function(){c.style.left=c.style.top='0';c.style.width='100vw';c.style.height='100vh'})});
-    setTimeout(function(){location.href=a.href},400);
-  });
+document.addEventListener('click',function(e){
+  var a=e.target.closest('a.cell,a[data-open]');if(!a)return;
+  var h=a.getAttribute('href');
+  if(e.metaKey||e.ctrlKey||e.shiftKey||e.button!==0||a.target==='_blank'||!h||h==='#')return;
+  e.preventDefault();
+  if(a.dataset.id)sessionStorage.setItem('openedTile',a.dataset.id);
+  if(REDUCE)return location.href=a.href;
+  var c=cover(getComputedStyle(a).backgroundColor,a.getBoundingClientRect());
+  requestAnimationFrame(function(){requestAnimationFrame(function(){c.style.left=c.style.top='0';c.style.width='100vw';c.style.height='100vh'})});
+  setTimeout(function(){location.href=a.href},400);
 });
 
 // 3) Coming back home from a section: the full-screen color shrinks back into its brick.
