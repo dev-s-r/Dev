@@ -1,3 +1,4 @@
+
 {
   "example-song.mp3": {
     "title": "My Song Name",
@@ -6,7 +7,7 @@
   },
   "I Wonder.mp3": {
     "title": "I Wonder",
-    "artist": "Dev Singh Rathore",
-    "cover": ""
+    "artist": "Kanye West",
+    "cover": "iwonder.webp"
   }
 }
