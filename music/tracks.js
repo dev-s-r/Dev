@@ -3,7 +3,8 @@
 window.TRACKS = [
   {
     "title": "I Wonder",
-    "artist": "Dev Singh Rathore",
-    "file": "tracks/I Wonder.mp3"
+    "artist": "Kanye West",
+    "file": "tracks/I Wonder.mp3",
+    "cover": "covers/iwonder.webp"
   }
 ];
