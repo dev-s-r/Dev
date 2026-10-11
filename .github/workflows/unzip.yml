@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "*.zip"
+      - "inbox/*.zip"
   workflow_dispatch:
 
 permissions:
@@ -22,9 +23,9 @@ jobs:
       - name: Unzip into the repo
         run: |
           shopt -s nullglob
-          zips=(*.zip)
+          zips=(inbox/*.zip *.zip)
           if [ ${#zips[@]} -eq 0 ]; then
-            echo "No zip file found in the repo root."
+            echo "No zip file found in the inbox folder or the repo root."
             exit 0
           fi
           for z in "${zips[@]}"; do
@@ -42,6 +43,8 @@ jobs:
             cp -a "$tmp"/. .
             rm -f "$z"
           done
+          # keep the inbox folder so it is still there for the next upload
+          if [ -d inbox ]; then touch inbox/.gitkeep; fi
 
       - uses: actions/setup-python@v5
         with:
