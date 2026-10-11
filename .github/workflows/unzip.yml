@@ -1,0 +1,66 @@
+name: Unzip uploaded site
+
+on:
+  push:
+    paths:
+      - "*.zip"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: unzip-site
+  cancel-in-progress: false
+
+jobs:
+  unzip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unzip into the repo
+        run: |
+          shopt -s nullglob
+          zips=(*.zip)
+          if [ ${#zips[@]} -eq 0 ]; then
+            echo "No zip file found in the repo root."
+            exit 0
+          fi
+          for z in "${zips[@]}"; do
+            echo "Unzipping $z"
+            tmp=$(mktemp -d)
+            unzip -q -o "$z" -d "$tmp" -x '__MACOSX/*'
+            # if everything is inside one wrapper folder, step into it
+            if [ ! -e "$tmp/index.html" ] && [ "$(ls -A "$tmp" | wc -l)" -eq 1 ] && [ -d "$tmp/$(ls -A "$tmp")" ]; then
+              tmp="$tmp/$(ls -A "$tmp")"
+            fi
+            cp -a "$tmp"/. .
+            rm -f "$z"
+          done
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Rebuild music list (only if the music action is installed)
+        run: |
+          if [ -f .github/scripts/build_tracks.py ]; then
+            pip install mutagen
+            python .github/scripts/build_tracks.py
+          fi
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # workflow files can't be changed by an action, so .github is left out
+          git add -A -- . ':(exclude).github'
+          if git diff --cached --quiet; then
+            echo "Nothing changed."
+          else
+            git commit -m "Unzip uploaded site"
+            git pull --rebase
+            git push
+          fi
+          
