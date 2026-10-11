@@ -35,6 +35,8 @@ jobs:
             if [ ! -e "$tmp/index.html" ] && [ "$(ls -A "$tmp" | wc -l)" -eq 1 ] && [ -d "$tmp/$(ls -A "$tmp")" ]; then
               tmp="$tmp/$(ls -A "$tmp")"
             fi
+            # never overwrite your songs, covers or the song list with the zip's copies
+            rm -rf "$tmp/music/tracks" "$tmp/music/covers" "$tmp/music/tracks.js"
             cp -a "$tmp"/. .
             rm -f "$z"
           done
@@ -63,4 +65,3 @@ jobs:
             git pull --rebase
             git push
           fi
-          
