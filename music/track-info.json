@@ -1,0 +1,7 @@
+{
+  "example-song.mp3": {
+    "title": "My Song Name",
+    "artist": "Artist Name",
+    "cover": "example-cover.jpg"
+  }
+}
