@@ -1,10 +1,118 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Music - Dev Singh Rathore</title><meta name="theme-color" content="#E11D48">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="../assets/sections.css?v=4"></head>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="../assets/sections.css?v=8"></head>
 <body style="background:#E11D48"><section class="pg" id="music">
- <div class="mu-top"><a class="mu-back m" href="../">&#9664; Home</a></div>
+ <div class="mu-top"><a class="mu-back m" href="../">&#9664; Home</a><a class="mu-yt m" href="https://music.youtube.com/@daalbaddie" target="_blank" rel="noopener">YouTube Music &nearr;</a></div>
  <h1 class="mu-h d">Music</h1>
  <div id="eq"></div>
- <a class="mu-bar" href="https://music.youtube.com/channel/UCTFjno2xr_SllG0RQKaCcuw" target="_blank" rel="noopener"><span class="mu-play">&#9654;</span><div style="flex:1"><div class="m" style="opacity:.7">Now playing &middot; YouTube Music</div><div class="d">Open my channel</div><div class="mu-trk"></div></div></a>
-</section><script src="../assets/site.js?v=4"></script><script>document.getElementById('eq').innerHTML=Array.from({length:22},function(_,i){return'<i style="animation-delay:-'+(i*.37%1.3).toFixed(2)+'s;animation-duration:'+(.7+(i*7%5)*.15).toFixed(2)+'s"></i>'}).join('')</script></body></html>
+ <div class="mu-pl">
+  <div class="mu-now">
+   <div id="cvw"></div>
+   <div><div class="m" style="opacity:.7" id="art">Pick a track</div><div class="d" id="ttl">Nothing playing</div></div>
+  </div>
+  <div class="mu-ctl">
+   <button class="mu-sk" id="prev" aria-label="Previous track">&#9198;</button>
+   <button class="mu-pp" id="pp" aria-label="Play">&#9654;</button>
+   <button class="mu-sk" id="next" aria-label="Next track">&#9197;</button>
+  </div>
+  <div class="mu-seek"><span class="m" id="tc">0:00</span><input class="mu-r" id="seek" type="range" min="0" max="1000" value="0" aria-label="Seek"><span class="m" id="td">0:00</span></div>
+ </div>
+ <div class="mu-list" id="list"></div>
+ <audio id="au" preload="metadata"></audio>
+</section>
+<script src="../assets/site.js?v=4"></script>
+<script src="tracks.js"></script>
+<script>
+document.getElementById('eq').innerHTML=Array.from({length:22},function(_,i){return'<i style="animation-delay:-'+(i*.37%1.3).toFixed(2)+'s;animation-duration:'+(.7+(i*7%5)*.15).toFixed(2)+'s"></i>'}).join('');
+(function(){
+var T=window.TRACKS||[],cur=-1,au=document.getElementById('au');
+function $(id){return document.getElementById(id)}
+var list=$('list'),pp=$('pp'),seek=$('seek');
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+var COLS=['#2563EB','#059669','#D97706','#7C3AED','#E11D48'];
+function cv(t){var s=String(t.title||'?'),c=0,i;for(i=0;i<s.length;i++)c+=s.charCodeAt(i);
+  return'<div class="mu-cv" style="background:'+COLS[c%COLS.length]+'"><span>'+esc(s.charAt(0).toUpperCase())+'</span>'+(t.cover?'<img src="'+esc(encodeURI(t.cover))+'" alt="" onerror="this.remove()">':'')+'</div>'}
+function fmt(s){if(!isFinite(s))return'0:00';var m=Math.floor(s/60),x=Math.floor(s%60);return m+':'+(x<10?'0':'')+x}
+function render(){
+  if(!T.length){list.innerHTML='<div class="mu-empty m">No tracks yet. Add files to music/tracks/ and list them in music/tracks.js</div>';return}
+  list.innerHTML=T.map(function(t,k){return'<button class="mu-it'+(k===cur?' on':'')+'" data-k="'+k+'"><span class="n m">'+(k<9?'0':'')+(k+1)+'</span><span class="d">'+esc(t.title)+'</span><span class="m">'+esc(t.artist)+'</span></button>'}).join('');
+}
+function load(k,go){
+  if(!T.length)return;
+  cur=(k+T.length)%T.length;var t=T[cur];
+  au.src=encodeURI(t.file);
+  $('ttl').textContent=t.title;$('cvw').innerHTML=cv(t);$('art').textContent=t.artist||'Dev Singh Rathore';
+  seek.value=0;seek.style.setProperty('--p','0%');$('tc').textContent='0:00';$('td').textContent='0:00';
+  render();
+  if('mediaSession' in navigator)navigator.mediaSession.metadata=new MediaMetadata({title:t.title,artist:t.artist||'',artwork:t.cover?[{src:new URL(t.cover,location.href).href}]:[]});
+  if(go)au.play().catch(function(){});
+}
+function toggle(){if(cur<0){load(0,true);return}au.paused?au.play().catch(function(){}):au.pause()}
+pp.onclick=toggle;
+$('next').onclick=function(){load(cur<0?0:cur+1,true)};
+$('prev').onclick=function(){if(au.currentTime>3){au.currentTime=0}else load(cur<0?0:cur-1,true)};
+list.onclick=function(e){var b=e.target.closest('.mu-it');if(!b)return;var k=+b.dataset.k;if(k===cur)toggle();else load(k,true)};
+au.addEventListener('play',function(){document.body.classList.add('playing');viz.start();pp.innerHTML='&#10074;&#10074;';pp.setAttribute('aria-label','Pause')});
+au.addEventListener('pause',function(){document.body.classList.remove('playing');viz.stop();pp.innerHTML='&#9654;';pp.setAttribute('aria-label','Play')});
+au.addEventListener('ended',function(){load(cur+1,true)});
+au.addEventListener('loadedmetadata',function(){$('td').textContent=fmt(au.duration)});
+au.addEventListener('timeupdate',function(){
+  if(!au.duration)return;var p=au.currentTime/au.duration*1000;
+  if(!seek.dataset.drag){seek.value=p;seek.style.setProperty('--p',(p/10)+'%')}
+  $('tc').textContent=fmt(au.currentTime);
+});
+au.addEventListener('error',function(){if(cur>=0)$('art').textContent='Could not load this file'});
+seek.addEventListener('input',function(){seek.dataset.drag=1;seek.style.setProperty('--p',(seek.value/10)+'%');if(au.duration)$('tc').textContent=fmt(seek.value/1000*au.duration)});
+seek.addEventListener('change',function(){if(au.duration)au.currentTime=seek.value/1000*au.duration;delete seek.dataset.drag});
+if('mediaSession' in navigator){
+  navigator.mediaSession.setActionHandler('play',toggle);navigator.mediaSession.setActionHandler('pause',toggle);
+  navigator.mediaSession.setActionHandler('nexttrack',function(){load(cur+1,true)});
+  navigator.mediaSession.setActionHandler('previoustrack',function(){load(cur-1,true)});
+}
+var viz=(function(){
+  var ac,an,data,raf=0,eq=$('eq'),bars=[].slice.call(eq.children),cd=$('cvw'),N=bars.length,H=N/2,
+      cur=[],edges=[],pk=.4,bs=0,ok=!matchMedia('(prefers-reduced-motion:reduce)').matches;
+  function init(){
+    if(ac||!ok)return;var Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return;
+    var u;try{u=new URL(au.src,location.href)}catch(e){return}
+    // only same-origin audio can be analysed; otherwise the browser would silence it
+    if(!(u.protocol==='blob:'||(location.protocol!=='file:'&&u.origin===location.origin)))return;
+    try{ac=new Ctx();an=ac.createAnalyser();an.fftSize=512;an.smoothingTimeConstant=.5;
+      ac.createMediaElementSource(au).connect(an);an.connect(ac.destination);
+      data=new Uint8Array(an.frequencyBinCount);
+      var hz=ac.sampleRate/an.fftSize,k;
+      for(k=0;k<=H;k++)edges.push(Math.max(1,Math.round(50*Math.pow(10000/50,k/H)/hz)));
+      for(k=1;k<=H;k++){if(edges[k]<=edges[k-1])edges[k]=edges[k-1]+1;cur.push(0)}
+      eq.classList.add('live')}catch(e){ac=an=null}
+  }
+  // Bass sits in the middle and the highs spread out to both sides, so the bars look balanced.
+  function frame(){
+    raf=requestAnimationFrame(frame);if(!an)return;an.getByteFrequencyData(data);
+    var vals=[],mx=0,k,j,i;
+    for(k=0;k<H;k++){
+      var s=0,m=0,x=edges[k],y=edges[k+1];
+      for(j=x;j<y;j++){s+=data[j];if(data[j]>m)m=data[j]}
+      var v=(s/(y-x)*.5+m*.5)/255*(1+k*.1);   // slight boost for the quieter high bands
+      vals.push(v);if(v>mx)mx=v;
+    }
+    pk=Math.max(mx,pk*.996,.3);                // auto-level: quiet and loud songs both fill the bars
+    for(k=0;k<H;k++){var t=Math.min(1,vals[k]/pk);cur[k]+=(t-cur[k])*(t>cur[k]?.55:.12)}  // fast rise, slow fall
+    for(i=0;i<N;i++){
+      var d=Math.round(Math.abs(i-(N-1)/2)-.5);
+      bars[i].style.transform='scaleY('+(.07+.93*Math.pow(cur[d],1.3)).toFixed(3)+')';
+    }
+    var b=Math.min(1,(vals[0]+vals[1])/2/pk);b*=b;bs+=(b-bs)*(b>bs?.6:.15);
+    cd.style.transform='scale('+(1+bs*.07).toFixed(3)+')';
+  }
+  return{
+    start:function(){init();if(ac&&ac.state==='suspended')ac.resume();if(an&&!raf)frame()},
+    stop:function(){if(raf){cancelAnimationFrame(raf);raf=0}
+      if(an){bars.forEach(function(b){b.style.transform='scaleY(.08)'});cd.style.transform='';bs=0}}
+  };
+})();
+
+render();
+if(T.length)load(0,false);
+})();
+</script></body></html>
