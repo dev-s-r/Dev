@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Music - Dev Singh Rathore</title><meta name="theme-color" content="#E11D48">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="../assets/sections.css?v=8"></head>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="../assets/sections.css?v=13"></head>
 <body style="background:#E11D48"><section class="pg" id="music">
  <div class="mu-top"><a class="mu-back m" href="../">&#9664; Home</a><a class="mu-yt m" href="https://music.youtube.com/@daalbaddie" target="_blank" rel="noopener">YouTube Music &nearr;</a></div>
  <h1 class="mu-h d">Music</h1>
  <div id="eq"></div>
  <div class="mu-pl">
   <div class="mu-now">
-   <div id="cvw"></div>
+   <div class="mu-dw"><div id="cvw" aria-label="Tap to play or pause. Swipe left or right for next or previous. Swipe up or down to change speed."></div><div class="mu-tip" id="tip" aria-live="polite"></div></div>
    <div><div class="m" style="opacity:.7" id="art">Pick a track</div><div class="d" id="ttl">Nothing playing</div></div>
   </div>
   <div class="mu-ctl">
@@ -17,45 +17,124 @@
    <button class="mu-sk" id="next" aria-label="Next track">&#9197;</button>
   </div>
   <div class="mu-seek"><span class="m" id="tc">0:00</span><input class="mu-r" id="seek" type="range" min="0" max="1000" value="0" aria-label="Seek"><span class="m" id="td">0:00</span></div>
+  <div class="mu-tools">
+   <button class="mu-t" id="shuf" aria-label="Shuffle" aria-pressed="false"></button>
+   <button class="mu-t" id="b10" aria-label="Back 10 seconds">&minus;10</button>
+   <button class="mu-t" id="spd" aria-label="Playback speed">1x</button>
+   <button class="mu-t" id="f10" aria-label="Forward 10 seconds">+10</button>
+   <button class="mu-t on" id="rep" aria-label="Repeat all"></button>
+   <button class="mu-t" id="slp" aria-label="Sleep timer"></button>
+  </div>
  </div>
  <div class="mu-list" id="list"></div>
+ <div class="mu-more" id="more"></div>
  <audio id="au" preload="metadata"></audio>
 </section>
 <script src="../assets/site.js?v=4"></script>
-<script src="tracks.js"></script>
+<script>document.write('<script src="tracks.js?v='+Date.now()+'"><\/script>')</script>
 <script>
 document.getElementById('eq').innerHTML=Array.from({length:22},function(_,i){return'<i style="animation-delay:-'+(i*.37%1.3).toFixed(2)+'s;animation-duration:'+(.7+(i*7%5)*.15).toFixed(2)+'s"></i>'}).join('');
 (function(){
-var T=window.TRACKS||[],cur=-1,au=document.getElementById('au');
+var T=window.TRACKS||[],cur=-1,hist=[],au=document.getElementById('au');
 function $(id){return document.getElementById(id)}
-var list=$('list'),pp=$('pp'),seek=$('seek');
+var list=$('list'),pp=$('pp'),seek=$('seek'),cdw=$('cvw');
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 var COLS=['#2563EB','#059669','#D97706','#7C3AED','#E11D48'];
 function cv(t){var s=String(t.title||'?'),c=0,i;for(i=0;i<s.length;i++)c+=s.charCodeAt(i);
-  return'<div class="mu-cv" style="background:'+COLS[c%COLS.length]+'"><span>'+esc(s.charAt(0).toUpperCase())+'</span>'+(t.cover?'<img src="'+esc(encodeURI(t.cover))+'" alt="" onerror="this.remove()">':'')+'</div>'}
+  return'<div class="mu-cv" style="background:'+COLS[c%COLS.length]+'"><span>'+esc(s.charAt(0).toUpperCase())+'</span>'+(t.cover?'<img src="'+esc(encodeURI(t.cover))+'" alt="" draggable="false" onerror="this.remove()">':'')+'</div>'}
 function fmt(s){if(!isFinite(s))return'0:00';var m=Math.floor(s/60),x=Math.floor(s%60);return m+':'+(x<10?'0':'')+x}
+
+/* ---- song list (scrollable box) ---- */
 function render(){
-  if(!T.length){list.innerHTML='<div class="mu-empty m">No tracks yet. Add files to music/tracks/ and list them in music/tracks.js</div>';return}
-  list.innerHTML=T.map(function(t,k){return'<button class="mu-it'+(k===cur?' on':'')+'" data-k="'+k+'"><span class="n m">'+(k<9?'0':'')+(k+1)+'</span><span class="d">'+esc(t.title)+'</span><span class="m">'+esc(t.artist)+'</span></button>'}).join('');
+  if(!T.length){list.innerHTML='<div class="mu-empty m">No tracks yet. Upload songs to music/tracks/ and the list builds itself</div>';return}
+  list.innerHTML=T.map(function(t,k){var n=k+1;
+    return'<button class="mu-it'+(k===cur?' on':'')+'" data-k="'+k+'"><span class="n m">'+(n<10?'0':'')+n+'</span><span class="d">'+esc(t.title)+'</span><span class="m">'+esc(t.artist)+'</span></button>'}).join('');
 }
-function load(k,go){
+function markActive(){
+  var ch=list.children,i;for(i=0;i<ch.length;i++)ch[i].classList.toggle('on',i===cur);
+  var el=ch[cur];if(el&&el.offsetHeight){var t=el.offsetTop,b=t+el.offsetHeight;
+    if(t<list.scrollTop)list.scrollTop=t;else if(b>list.scrollTop+list.clientHeight)list.scrollTop=b-list.clientHeight}
+}
+function okUrl(u){return /^https?:\/\//i.test(String(u||''))}
+// "Download music" bar(s) under the song list, filled from music/links.json
+function renderMore(){
+  var L=(window.MUSIC_LINKS||[]).filter(function(l){return okUrl(l.url)});
+  $('more').innerHTML=L.map(function(l){return'<a class="mu-dl" href="'+esc(l.url)+'" target="_blank" rel="noopener"><span>&darr; '+esc(l.label||'Download music')+'</span><span>&nearr;</span></a>'}).join('');
+}
+
+/* ---- player features ---- */
+var SP=[.5,.75,1,1.25,1.5,2],CYC=[2,3,4,5,1],si=2,shuf=false,rep=0,SL=[0,15,30,60],sli=0,slTimer=0,tipT=0;
+var SV='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
+var IC_SHUF=SV+'<path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>';
+var IC_REP=SV+'<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>';
+var IC_MOON=SV+'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>';
+$('shuf').innerHTML=IC_SHUF;$('rep').innerHTML=IC_REP;$('slp').innerHTML=IC_MOON;
+function tip(t){var e=$('tip');e.textContent=t;e.classList.add('show');clearTimeout(tipT);tipT=setTimeout(function(){e.classList.remove('show')},950)}
+function spin(){try{var a=cdw.querySelector('.mu-cv').getAnimations()[0];if(a)a.playbackRate=SP[si]}catch(e){}}   // the disc spins faster / slower with the song
+function setSpeed(i,quiet){
+  si=Math.max(0,Math.min(SP.length-1,i));var v=SP[si];
+  au.defaultPlaybackRate=v;au.playbackRate=v;
+  var s=(v%1===0?v.toFixed(0):v)+'x';$('spd').textContent=s;$('spd').classList.toggle('on',v!==1);spin();
+  if(!quiet)tip('Speed '+s);
+}
+function skip(d){if(cur<0)return;var m=isFinite(au.duration)?au.duration-.1:1e9;au.currentTime=Math.max(0,Math.min(m,au.currentTime+d));tip((d<0?'\u2212':'+')+Math.abs(d)+'s')}
+function load(k,go,nopush){
   if(!T.length)return;
-  cur=(k+T.length)%T.length;var t=T[cur];
-  au.src=encodeURI(t.file);
-  $('ttl').textContent=t.title;$('cvw').innerHTML=cv(t);$('art').textContent=t.artist||'Dev Singh Rathore';
+  var n=(k+T.length)%T.length;
+  if(!nopush&&cur>=0&&n!==cur){hist.push(cur);if(hist.length>50)hist.shift()}
+  cur=n;var t=T[cur];
+  au.src=encodeURI(t.file);au.defaultPlaybackRate=SP[si];au.playbackRate=SP[si];
+  $('ttl').textContent=t.title;cdw.innerHTML=cv(t);spin();$('art').textContent=t.artist||'Dev Singh Rathore';
   seek.value=0;seek.style.setProperty('--p','0%');$('tc').textContent='0:00';$('td').textContent='0:00';
-  render();
+  markActive();
   if('mediaSession' in navigator)navigator.mediaSession.metadata=new MediaMetadata({title:t.title,artist:t.artist||'',artwork:t.cover?[{src:new URL(t.cover,location.href).href}]:[]});
   if(go)au.play().catch(function(){});
 }
-function toggle(){if(cur<0){load(0,true);return}au.paused?au.play().catch(function(){}):au.pause()}
+function toggle(){if(!T.length)return;if(cur<0){load(0,true);return}au.paused?au.play().catch(function(){}):au.pause()}
+function next(auto){
+  if(!T.length)return;if(cur<0){load(0,true);return}
+  if(shuf&&T.length>1){var k;do{k=Math.floor(Math.random()*T.length)}while(k===cur);load(k,true);return}
+  if(auto&&rep===2&&cur===T.length-1){au.pause();au.currentTime=0;return}   // repeat off: stop after the last song
+  load(cur+1,true);
+}
+function prev(){
+  if(!T.length)return;if(cur<0){load(0,true);return}
+  if(au.currentTime>3){au.currentTime=0;return}
+  if(shuf&&hist.length){load(hist.pop(),true,true);return}
+  load(cur-1,true);
+}
 pp.onclick=toggle;
-$('next').onclick=function(){load(cur<0?0:cur+1,true)};
-$('prev').onclick=function(){if(au.currentTime>3){au.currentTime=0}else load(cur<0?0:cur-1,true)};
+$('next').onclick=function(){next(false)};
+$('prev').onclick=prev;
+$('b10').onclick=function(){skip(-10)};
+$('f10').onclick=function(){skip(10)};
+$('spd').onclick=function(){var k=CYC.indexOf(si);setSpeed(k<0?2:CYC[(k+1)%CYC.length])};   // 1x > 1.25x > 1.5x > 2x > 0.75x > 1x
+$('shuf').onclick=function(){shuf=!shuf;this.classList.toggle('on',shuf);this.setAttribute('aria-pressed',shuf);tip(shuf?'Shuffle on':'Shuffle off')};
+$('rep').onclick=function(){
+  rep=(rep+1)%3;au.loop=rep===1;var n=['Repeat all','Repeat one','Repeat off'][rep];
+  this.innerHTML=IC_REP+(rep===1?'<b class="mu-bd">1</b>':'');this.setAttribute('aria-label',n);this.classList.toggle('on',rep!==2);tip(n);
+};
+$('slp').onclick=function(){
+  sli=(sli+1)%SL.length;clearTimeout(slTimer);var m=SL[sli];
+  this.innerHTML=m?'<span>'+m+'</span>':IC_MOON;this.classList.toggle('on',!!m);
+  tip(m?'Sleep in '+m+' min':'Sleep off');
+  if(m)slTimer=setTimeout(function(){au.pause();sli=0;$('slp').innerHTML=IC_MOON;$('slp').classList.remove('on')},m*60000);
+};
+// the disc: tap = play / pause, swipe left = next, swipe right = previous, swipe up = faster, swipe down = slower
+var px=null,py=null;
+cdw.addEventListener('pointerdown',function(e){px=e.clientX;py=e.clientY;try{cdw.setPointerCapture(e.pointerId)}catch(x){}});   // keeps tracking the finger even when it leaves the disc
+cdw.addEventListener('pointercancel',function(){px=null});
+cdw.addEventListener('pointerup',function(e){
+  if(px==null)return;var dx=e.clientX-px,dy=e.clientY-py,ax=Math.abs(dx),ay=Math.abs(dy);px=null;
+  if(ax>45&&ax>=ay){dx<0?next(false):prev()}
+  else if(ay>45){setSpeed(si+(dy<0?1:-1))}
+  else toggle();
+});
 list.onclick=function(e){var b=e.target.closest('.mu-it');if(!b)return;var k=+b.dataset.k;if(k===cur)toggle();else load(k,true)};
+
 au.addEventListener('play',function(){document.body.classList.add('playing');viz.start();pp.innerHTML='&#10074;&#10074;';pp.setAttribute('aria-label','Pause')});
 au.addEventListener('pause',function(){document.body.classList.remove('playing');viz.stop();pp.innerHTML='&#9654;';pp.setAttribute('aria-label','Play')});
-au.addEventListener('ended',function(){load(cur+1,true)});
+au.addEventListener('ended',function(){next(true)});
 au.addEventListener('loadedmetadata',function(){$('td').textContent=fmt(au.duration)});
 au.addEventListener('timeupdate',function(){
   if(!au.duration)return;var p=au.currentTime/au.duration*1000;
@@ -66,13 +145,16 @@ au.addEventListener('error',function(){if(cur>=0)$('art').textContent='Could not
 seek.addEventListener('input',function(){seek.dataset.drag=1;seek.style.setProperty('--p',(seek.value/10)+'%');if(au.duration)$('tc').textContent=fmt(seek.value/1000*au.duration)});
 seek.addEventListener('change',function(){if(au.duration)au.currentTime=seek.value/1000*au.duration;delete seek.dataset.drag});
 if('mediaSession' in navigator){
-  navigator.mediaSession.setActionHandler('play',toggle);navigator.mediaSession.setActionHandler('pause',toggle);
-  navigator.mediaSession.setActionHandler('nexttrack',function(){load(cur+1,true)});
-  navigator.mediaSession.setActionHandler('previoustrack',function(){load(cur-1,true)});
+  var ms=navigator.mediaSession;
+  ms.setActionHandler('play',toggle);ms.setActionHandler('pause',toggle);
+  ms.setActionHandler('nexttrack',function(){next(false)});ms.setActionHandler('previoustrack',prev);
+  try{ms.setActionHandler('seekbackward',function(){skip(-10)});ms.setActionHandler('seekforward',function(){skip(10)})}catch(e){}
 }
+
+/* ---- live equalizer (reacts to the music) ---- */
 var viz=(function(){
   var ac,an,data,raf=0,eq=$('eq'),bars=[].slice.call(eq.children),cd=$('cvw'),N=bars.length,H=N/2,
-      cur=[],edges=[],pk=.4,bs=0,ok=!matchMedia('(prefers-reduced-motion:reduce)').matches;
+      cu=[],edges=[],pk=.4,bs=0,ok=!matchMedia('(prefers-reduced-motion:reduce)').matches;
   function init(){
     if(ac||!ok)return;var Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return;
     var u;try{u=new URL(au.src,location.href)}catch(e){return}
@@ -83,7 +165,7 @@ var viz=(function(){
       data=new Uint8Array(an.frequencyBinCount);
       var hz=ac.sampleRate/an.fftSize,k;
       for(k=0;k<=H;k++)edges.push(Math.max(1,Math.round(50*Math.pow(10000/50,k/H)/hz)));
-      for(k=1;k<=H;k++){if(edges[k]<=edges[k-1])edges[k]=edges[k-1]+1;cur.push(0)}
+      for(k=1;k<=H;k++){if(edges[k]<=edges[k-1])edges[k]=edges[k-1]+1;cu.push(0)}
       eq.classList.add('live')}catch(e){ac=an=null}
   }
   // Bass sits in the middle and the highs spread out to both sides, so the bars look balanced.
@@ -93,14 +175,14 @@ var viz=(function(){
     for(k=0;k<H;k++){
       var s=0,m=0,x=edges[k],y=edges[k+1];
       for(j=x;j<y;j++){s+=data[j];if(data[j]>m)m=data[j]}
-      var v=(s/(y-x)*.5+m*.5)/255*(1+k*.1);   // slight boost for the quieter high bands
+      var v=(s/(y-x)*.5+m*.5)/255*(1+k*.1);
       vals.push(v);if(v>mx)mx=v;
     }
-    pk=Math.max(mx,pk*.996,.3);                // auto-level: quiet and loud songs both fill the bars
-    for(k=0;k<H;k++){var t=Math.min(1,vals[k]/pk);cur[k]+=(t-cur[k])*(t>cur[k]?.55:.12)}  // fast rise, slow fall
+    pk=Math.max(mx,pk*.996,.3);
+    for(k=0;k<H;k++){var t=Math.min(1,vals[k]/pk);cu[k]+=(t-cu[k])*(t>cu[k]?.55:.12)}
     for(i=0;i<N;i++){
       var d=Math.round(Math.abs(i-(N-1)/2)-.5);
-      bars[i].style.transform='scaleY('+(.07+.93*Math.pow(cur[d],1.3)).toFixed(3)+')';
+      bars[i].style.transform='scaleY('+(.07+.93*Math.pow(cu[d],1.3)).toFixed(3)+')';
     }
     var b=Math.min(1,(vals[0]+vals[1])/2/pk);b*=b;bs+=(b-bs)*(b>bs?.6:.15);
     cd.style.transform='scale('+(1+bs*.07).toFixed(3)+')';
@@ -112,7 +194,7 @@ var viz=(function(){
   };
 })();
 
-render();
+render();renderMore();
 if(T.length)load(0,false);
 })();
 </script></body></html>
