@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Builds music/tracks.js from the audio files in music/tracks/.
 
-Title, artist and cover art are read from the file's own tags (ID3 / MP4 / FLAC).
- - No title tag?  The file name is used (numbers at the start are ignored).
- - No artist tag? DEFAULT_ARTIST is used.
- - No cover?      A cover image in music/covers/ with the same name as the song is used
-                  (jpg, png or webp). If there is none, the player shows a colored tile.
+When a NEW song appears in music/tracks/, a block for it is added to music/track-info.json,
+already filled in from the song's own tags (ID3 / MP4 / FLAC), or from the file name if it has
+no tags. Blocks that already exist are never changed, so whatever you edit there stays.
+Then music/tracks.js is built from music/track-info.json:
+ - an empty title / artist / cover falls back to the song's tags, file name and DEFAULT_ARTIST
+ - a picture in music/covers/ with the same name as the song is used as the cover
+   (jpg, png or webp); if there is none, the player shows a colored tile.
 """
 import json
 import re
@@ -17,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[2]
 MUSIC = ROOT / "music"
 TRACKS = MUSIC / "tracks"
 COVERS = MUSIC / "covers"
+INFO = MUSIC / "track-info.json"
 AUDIO = {".mp3", ".m4a", ".mp4", ".aac", ".wav", ".ogg", ".opus", ".flac"}
 IMG = (".jpg", ".jpeg", ".png", ".webp")
 
@@ -71,6 +74,28 @@ def read_meta(path):
     return title, artist, pic, mime
 
 
+def load_info():
+    """Reads your changes from music/track-info.json. A typo there never breaks the build."""
+    if not INFO.exists():
+        return {}, True
+    try:
+        data = json.loads(INFO.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError("the file must start with { and end with }")
+        return data, True
+    except Exception as e:
+        print(f"::warning::music/track-info.json was ignored (and left untouched) because of an error: {e}")
+        return {}, False
+
+
+def cover_path(value):
+    """Turns 'my-cover.jpg' into 'covers/my-cover.jpg'. Full links (https://...) are kept."""
+    c = str(value).strip()
+    if c.lower().startswith(("http://", "https://")) or c.startswith("covers/"):
+        return c
+    return "covers/" + c
+
+
 def find_cover(stem):
     for name in {stem, slug(stem)}:
         for e in IMG:
@@ -84,24 +109,62 @@ def main():
     COVERS.mkdir(parents=True, exist_ok=True)
     files = sorted((p for p in TRACKS.iterdir() if p.suffix.lower() in AUDIO),
                    key=lambda p: p.name.lower())
-    out = []
+    info, info_ok = load_info()
+    names = {p.name for p in files} | {p.stem for p in files}
+    for key in info:
+        if key not in names:
+            print(f"::warning::track-info.json has '{key}' but there is no song with that name in music/tracks/ (delete that block if the song was removed)")
+
+    out, added = [], 0
     for p in files:
         title, artist, pic, mime = read_meta(p)
-        cover = find_cover(p.stem)
-        if not cover and pic:
-            e = ".png" if mime and "png" in mime else ".webp" if mime and "webp" in mime else ".jpg"
-            dest = COVERS / f"{slug(p.stem)}{e}"
-            dest.write_bytes(pic)
-            cover = f"covers/{dest.name}"
+        o = info.get(p.name)
+        if o is None:
+            o = info.get(p.stem)
+        is_new = o is None
+        if not isinstance(o, dict):
+            o = {}
+
+        # cover: your choice in track-info.json > picture named like the song > art inside the file
+        mine = str(o.get("cover") or "").strip()
+        cover = None
+        if mine:
+            cover = cover_path(mine)
+            if not cover.lower().startswith("http") and not (MUSIC / cover).exists():
+                print(f"::warning::cover '{cover}' for {p.name} was not found in music/covers/")
+        else:
+            cover = find_cover(p.stem)
+            if not cover and pic:
+                e = ".png" if mime and "png" in mime else ".webp" if mime and "webp" in mime else ".jpg"
+                dest = COVERS / f"{slug(p.stem)}{e}"
+                dest.write_bytes(pic)
+                cover = f"covers/{dest.name}"
+
+        auto_title = (title or "").strip() or pretty(p.stem)
+        auto_artist = (artist or "").strip() or DEFAULT_ARTIST
+
+        if is_new and info_ok:
+            # first time we see this song: add a block you can edit later
+            info[p.name] = {
+                "title": auto_title,
+                "artist": auto_artist,
+                "cover": cover[len("covers/"):] if cover and cover.startswith("covers/") else (cover or ""),
+            }
+            added += 1
+
         item = {
-            "title": (title or "").strip() or pretty(p.stem),
-            "artist": (artist or "").strip() or DEFAULT_ARTIST,
+            "title": str(o.get("title") or "").strip() or auto_title,
+            "artist": str(o.get("artist") or "").strip() or auto_artist,
             "file": f"tracks/{p.name}",
         }
         if cover:
             item["cover"] = cover
         out.append(item)
-        print(f"+ {item['title']}  -  {item['artist']}" + ("  [cover]" if cover else ""))
+        print(f"+ {item['title']}  -  {item['artist']}" + ("  [cover]" if cover else "") + ("  (new)" if is_new else ""))
+
+    if info_ok and added:
+        INFO.write_text(json.dumps(info, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        print(f"{added} new song(s) added to music/track-info.json")
 
     body = json.dumps(out, indent=2, ensure_ascii=False)
     (MUSIC / "tracks.js").write_text(
@@ -115,4 +178,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-  
