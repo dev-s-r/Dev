@@ -36,7 +36,7 @@ jobs:
               tmp="$tmp/$(ls -A "$tmp")"
             fi
             # never overwrite your songs, covers or the song list with the zip's copies
-            rm -rf "$tmp/music/tracks" "$tmp/music/covers" "$tmp/music/tracks.js"
+            rm -rf "$tmp/music/tracks" "$tmp/music/covers" "$tmp/music/tracks.js" "$tmp/music/track-info.json"
             cp -a "$tmp"/. .
             rm -f "$z"
           done
